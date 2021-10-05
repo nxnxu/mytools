@@ -1,0 +1,63 @@
+#!/bin/bash
+
+PROGRAM_NAME=cxxrun
+IFS='@' read -r -a args <<< $@
+FILES=${args[0]}
+ARGS=${args[1]}
+EXECUTABLE=a.out
+CXXFLAGS='--std=c++17'
+
+
+if [ ${#args[@]} -eq 0 ]
+then
+    echo "Usage: $PROGRAM_NAME <files...> @ [arguments...]"
+    exit
+fi
+
+
+compile_files() {
+    return $(g++ $CXXFLAGS $@ -o $EXECUTABLE)
+}
+
+run_executable() {
+    ./$EXECUTABLE $@
+}
+
+
+# Only compile if any file time stamp is greater than executable.
+try_compile_files() {
+    if [ -f $EXECUTABLE ]
+    then
+        for FILE in "${@}"
+        do
+            if [ $FILE -nt $EXECUTABLE ]
+            then
+                return $(compile_files $@)
+            fi
+        done
+    else 
+        return $(compile_files $@)
+    fi
+
+    return 0
+}
+
+check_files_exists() {
+    for FILE in "${@}"
+    do
+        if [ ! -f $FILE  ]
+        then
+            echo
+            echo "$FILE doesn't exists"
+            return 1
+        fi
+    done
+
+    return 0
+}
+
+if check_files_exists $FILES && try_compile_files $FILES
+then
+    run_executable $ARGS
+fi 
+
