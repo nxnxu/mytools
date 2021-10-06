@@ -1,0 +1,48 @@
+#!/bin/bash
+
+# Terminal Window Toggler - Bind keyboard shortcut to show/hide terminal window
+
+program_name=twtoggle
+
+function get_my_window_id() {
+	echo $(xdotool getactivewindow)
+}
+
+function toggle_window() {
+	if [ $(xdotool getactivewindow) = "$1" ]
+	then 
+		xdotool windowminimize "$1"
+	else 
+		xdotool set_desktop_for_window "$1" $(xdotool get_desktop)
+		xdotool windowactivate "$1"
+	fi
+}
+
+function clear_binding() {
+	xfconf-query --reset --channel xfce4-keyboard-shortcuts --property "/commands/custom/$1" && xfconf-query --reset --channel xfce4-keyboard-shortcuts --property "/xfwm4/custom/$1"
+}
+
+function set_binding() {
+	xfconf-query --create --channel xfce4-keyboard-shortcuts --property "/commands/custom/$1" --type string --set "$2"
+}
+
+function bind_shortcut_key_to_command() {
+	if ! (clear_binding "$1" && set_binding "$1" "$2"); then 
+		echo "Failed to set keyboard shortcut ($1)"
+	fi
+}
+
+if [ "$#" -eq 1 ]; then
+	window_id="$(get_my_window_id)"
+	bind_command="$(realpath $0) toggle $window_id"
+    bind_shortcut_key_to_command "$1" "$bind_command"
+elif [ "$#" -eq 2 ] && [ "$1" = "toggle" ]; then
+	toggle_window "$2"
+else
+	echo "Terminal Window Toggler - Bind a keyboard shortcut to show/hide the current terminal window"
+	echo "Usage: $program_name <shortcut-key>"
+	echo "Examples:"
+	echo "    $program_name \"<Super>Return\""
+	echo "    $program_name \"<Ctrl>Return\""
+	echo
+fi
